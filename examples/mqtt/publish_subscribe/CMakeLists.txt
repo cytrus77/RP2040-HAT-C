@@ -1,7 +1,7 @@
 set(TARGET_NAME w5x00_mqtt_publish_subscribe)
 
 add_executable(${TARGET_NAME}
-        ${TARGET_NAME}.c
+        ${TARGET_NAME}.cpp
         )
 
 target_link_libraries(${TARGET_NAME} PRIVATE

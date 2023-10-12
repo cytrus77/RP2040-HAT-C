@@ -2,13 +2,11 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Pull in SDK (must be before project)
-if(NOT DEFINED PICO_SDK_PATH)
-    set(PICO_SDK_PATH ${CMAKE_SOURCE_DIR}/libraries/pico-sdk)
-    message(STATUS "PICO_SDK_PATH = ${PICO_SDK_PATH}")
-endif()
+include(pico_sdk_import.cmake)
+
+include(pico_extras_import_optional.cmake)
 
 include(rp2040_hat_c-patch.cmake)
-include(pico_sdk_import.cmake)
 include(rp2040_hat_c_sdk_version.cmake)
 
 # Set project name
@@ -20,11 +18,15 @@ project(${PROJECT_NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
+if (PICO_SDK_VERSION_STRING VERSION_LESS "1.3.0")
+    message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.3.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
+endif()
+
 # Initialize the SDK
 pico_sdk_init()
 
 # Set ethernet chip
-set(WIZNET_CHIP W5100S)
+set(WIZNET_CHIP W5500)
 
 if(${WIZNET_CHIP} STREQUAL W5100S)
     add_definitions(-D_WIZCHIP_=W5100S)
