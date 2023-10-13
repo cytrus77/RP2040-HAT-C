@@ -18,14 +18,21 @@
 
 #include "wizchip_conf.h"
 // #include "w5x00_spi.h" // covered by extern "C
-
+// #include "timer.h"     // covered by extern "C
 #include "mqtt_interface.h"
 #include "MQTTClient.h"
 
-// #include "timer.h"     // covered by extern "C
-
 #include "defines.h"
 
+/* pico include */
+#include "pico/stdlib.h"
+#include "pico/time.h"
+#include "hardware/adc.h"
+#include "hardware/gpio.h"
+#include "hardware/irq.h"
+#include "hardware/pwm.h"
+#include "hardware/watchdog.h"
+/* pico include end */
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -68,18 +75,34 @@ static volatile uint32_t g_msec_cnt = 0;
 static void set_clock_khz(void);
 
 /* MQTT */
-static void message_arrived(MessageData *msg_data);
+static void message_arrived_pwm1(MessageData *msg_data);
+static void message_arrived_pwm2(MessageData *msg_data);
+static void message_arrived_pwm3(MessageData *msg_data);
+static void message_arrived_pwm4(MessageData *msg_data);
+static void message_arrived_pwm5(MessageData *msg_data);
+static void message_arrived_pwm6(MessageData *msg_data);
 
 /* Timer  */
 static void repeating_timer_callback(void);
 static time_t millis(void);
 
-void networkConnect();
+void networkConfig();
 void mqttConnect();
 bool sendMqtt(const string& topic, const string& data);
 bool sendMqtt(const string& topic, const int value);
 
+void configPWM(const uint8_t pinNo);
+void on_pwm_wrap();
+
+/* GPIO */
+void pirInit(uint8_t pinNo, gpio_irq_callback_t callback);
+void gpio_callback(uint gpio, uint32_t events);
+uint16_t readADC(ADCchannel& channel);
+void processADC(ADCchannel& channel);
+void processPIR(PIR& pir, bool state);
+
 void log(const string& domain, const string& log) { std::cout << domain << ": " << log << std::endl; }
+void log(const string& domain, const uint32_t value) { std::cout << domain << ": " << value << std::endl; }
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -88,6 +111,41 @@ void log(const string& domain, const string& log) { std::cout << domain << ": " 
  */
 int main()
 {
+    set_clock_khz();
+    stdio_init_all();
+
+    // if (watchdog_caused_reboot()) {
+    //     log("System", "Rebooted by Watchdog!");
+    //     return 0;
+    // } else {
+    //     log("System", "Clean boot");
+    // }
+    // watchdog_enable(1000, 1);
+
+    pirInit(pir1.pinNo, &gpio_callback);
+    pirInit(pir2.pinNo, &gpio_callback);
+    pirInit(pir3.pinNo, &gpio_callback);
+    pirInit(pir4.pinNo, &gpio_callback);
+    pirInit(pir5.pinNo, &gpio_callback);
+    pirInit(pir6.pinNo, &gpio_callback);
+    pirInit(pir7.pinNo, &gpio_callback);
+    pirInit(pir8.pinNo, &gpio_callback);
+    pirInit(pir9.pinNo, &gpio_callback);
+
+    adc_init();
+    adc_gpio_init(Port4ADCLPin);
+    adc_gpio_init(Port5ADCLPin);
+    adc_gpio_init(Port6ADCLPin);
+
+    configPWM(pwm1.pinNo);
+    configPWM(pwm2.pinNo);
+    configPWM(pwm3.pinNo);
+    configPWM(pwm4.pinNo);
+    configPWM(pwm5.pinNo);
+    configPWM(pwm6.pinNo);
+
+    networkConfig();
+
     /* Initialize */
     int32_t retval = 0;
     uint32_t start_ms = 0;
@@ -98,12 +156,14 @@ int main()
     /* Infinite loop */
     while (1)
     {
+        // watchdog_update();
+
         if (g_mqtt_client.isconnected)
         {
             bool result = true;
             if ((retval = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0)
             {
-                log("MQTT", "Yield error: " + retval);
+                log("MQTT", "Yield error: ");// + retval);
                 result = false;
             }
 
@@ -111,9 +171,12 @@ int main()
 
             if (end_ms > start_ms + MQTT_PUBLISH_PERIOD)
             {
-                log("MQTT", "sending BRO");
-                result = sendMqtt("ELDO","MORDO");
+                result = sendMqtt(uptimeTopic, millis()/1000);
                 start_ms = millis();
+
+                processADC(adc1);
+                processADC(adc2);
+                processADC(adc3);
             }
 
             if (!result)
@@ -123,7 +186,6 @@ int main()
         }
         else
         {
-            networkConnect();
             mqttConnect();
         }
     }
@@ -163,6 +225,79 @@ static time_t millis(void)
     return g_msec_cnt;
 }
 
+/* GPIO */
+#define LEVEL_LOW  0x1
+#define LEVEL_HIGH 0x2
+#define EDGE_FALL  0x4
+#define EDGE_RISE  0x8
+
+void pirInit(uint8_t pinNo, gpio_irq_callback_t callback)
+{
+    gpio_init(pinNo);
+    gpio_set_dir(pinNo, GPIO_IN);
+    gpio_pull_up(pinNo);
+    gpio_set_irq_enabled_with_callback(pinNo, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, callback);
+}
+
+void gpio_callback(uint gpio, uint32_t events)
+{
+    bool state = events & EDGE_RISE ? true : false;
+    state = events & EDGE_FALL ? false : true;
+
+    if (gpio == pir1.pinNo) processPIR(pir1, state);
+    else if (gpio == pir2.pinNo) processPIR(pir2, state);
+    else if (gpio == pir3.pinNo) processPIR(pir3, state);
+    else if (gpio == pir4.pinNo) processPIR(pir4, state);
+    else if (gpio == pir5.pinNo) processPIR(pir5, state);
+    else if (gpio == pir6.pinNo) processPIR(pir6, state);
+    else if (gpio == pir7.pinNo) processPIR(pir7, state);
+    else if (gpio == pir8.pinNo) processPIR(pir8, state);
+    else if (gpio == pir9.pinNo) processPIR(pir9, state);
+}
+
+void processPIR(PIR& pir, bool state)
+{
+    pir.measuredValue = state;
+    if (pir.measuredValue != pir.lastReportedValue || !pir.initDone)
+    {
+        string mqttState = state ? "HIGH" : "LOW";
+        log("PIR", pir.topicStat);
+        log("PIR", state);
+        auto result = sendMqtt(pir.topicStat, mqttState);
+        if (result)
+        {
+            pir.lastReportedValue = pir.measuredValue;
+            pir.initDone = true;
+        }
+    }
+}
+
+void processADC(ADCchannel& channel)
+{
+    static uint16_t MAX_ADC = 4095;
+    uint32_t tempVal = readADC(channel) * 100;
+    channel.measuredValue = tempVal / MAX_ADC; // value in %
+    if (abs(channel.measuredValue - channel.lastReportedValue) > 5 || !channel.initDone)
+    {
+        log("ADC", channel.topicStat);
+        log("ADC", channel.lastReportedValue);
+        log("ADC", channel.measuredValue);
+        auto result = sendMqtt(channel.topicStat, channel.measuredValue);
+        if (result)
+        {
+            channel.lastReportedValue = channel.measuredValue;
+            channel.initDone = true;
+        }
+    }
+}
+
+uint16_t readADC(ADCchannel& channel)
+{
+    adc_select_input(channel.channelNo);
+    return adc_read();
+}
+
+// MQTT
 extern "C" void wizchip_spi_initialize(void);
 extern "C" void wizchip_cris_initialize(void);
 extern "C" void wizchip_reset(void);
@@ -174,14 +309,8 @@ extern "C" void wizchip_1ms_timer_initialize(void (*callback)(void));
 
 ///////////===================================================================
 
-void networkConnect()
+void networkConfig()
 {
-    int32_t retval = 0;
-
-    set_clock_khz();
-
-    stdio_init_all();
-
     wizchip_spi_initialize();
     wizchip_cris_initialize();
 
@@ -197,19 +326,43 @@ void networkConnect()
     print_network_information(g_net_info);
 
     NewNetwork(&g_mqtt_network, SOCKET_MQTT);
+}
+
+string getNetInfo(wiz_NetInfo net_info)
+{
+    stringstream stream;
+    ctlnetwork(CN_GET_NETINFO, (void *)&net_info);
+
+    if (net_info.dhcp == NETINFO_DHCP)
+    {
+        stream << "network config : DHCP\n";
+    }
+    else
+    {
+        stream << "network config : static\n";
+    }
+
+    stream << " MAC         : " << net_info.mac << "\n";
+    // printf(" IP          : %d.%d.%d.%d\n", net_info.ip[0], net_info.ip[1], net_info.ip[2], net_info.ip[3]);
+    // printf(" Subnet Mask : %d.%d.%d.%d\n", net_info.sn[0], net_info.sn[1], net_info.sn[2], net_info.sn[3]);
+    // printf(" Gateway     : %d.%d.%d.%d\n", net_info.gw[0], net_info.gw[1], net_info.gw[2], net_info.gw[3]);
+    // printf(" DNS         : %d.%d.%d.%d\n", net_info.dns[0], net_info.dns[1], net_info.dns[2], net_info.dns[3]);
+    string str;
+    stream >> str;
+    return str;
+}
+
+void mqttConnect()
+{
+    int32_t retval = 0;
 
     retval = ConnectNetwork(&g_mqtt_network, g_mqtt_broker_ip, MQTT_PORT);
 
     if (retval != 1)
     {
         log("Network", "Network connect failed");
+        return;
     }
-}
-
-
-void mqttConnect()
-{
-    int32_t retval = 0;
 
     log("MQTT", "mqttConnect start");
     /* Initialize MQTT client */
@@ -228,17 +381,26 @@ void mqttConnect()
 
     if (retval < 0)
     {
-        log("MQTT", "MQTT connect failed: " + retval);
+        log("MQTT", "MQTT connect failed: ");// + retval);
+        return;
     }
 
     log("MQTT", "MQTT connected");
 
+    sendMqtt(statusTopic, getNetInfo(g_net_info));
+
     /* Subscribe */
-    retval = MQTTSubscribe(&g_mqtt_client, pwm1TopicCmnd.c_str(), QOS0, message_arrived);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm1.topicCmnd.c_str(), QOS0, message_arrived_pwm1);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm2.topicCmnd.c_str(), QOS0, message_arrived_pwm2);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm3.topicCmnd.c_str(), QOS0, message_arrived_pwm3);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm4.topicCmnd.c_str(), QOS0, message_arrived_pwm4);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm5.topicCmnd.c_str(), QOS0, message_arrived_pwm5);
+    retval = MQTTSubscribe(&g_mqtt_client, pwm6.topicCmnd.c_str(), QOS0, message_arrived_pwm6);
 
     if (retval < 0)
     {
-        log("MQTT", "Subscribe failed: "+ retval);
+        log("MQTT", "Subscribe failed: ");//+ retval);
+        return;
     }
 
     log("MQTT", "Subscribed");
@@ -258,15 +420,9 @@ bool sendMqtt(const string& topic, const string& data)
     retval = MQTTPublish(&g_mqtt_client, topic.c_str(), &g_mqtt_message);
     if (retval < 0)
     {
-        stringstream logStream;
-        logStream << "Publish failed: " << retval;
-        string logString;
-        logStream >> logString;
-        log("MQTT", logString);
+        log("MQTT", "Publish failed");
         return false;
     }
-
-    log("MQTT", "Published");
     return true;
 }
 
@@ -279,46 +435,100 @@ bool sendMqtt(const string& topic, const int value)
 }
 
 /* MQTT */
-static void message_arrived(MessageData *msg_data)
+void setMqttPwmTarget(PWMchannel& channel, uint8_t targetPwm)
 {
-    MQTTMessage *message = msg_data->message;
-
-    printf("%.*s", (uint32_t)message->payloadlen, (uint8_t *)message->payload);
+    channel.targetPWM = targetPwm;
 }
 
-// void messageReceived(String &topic, String &payload)
-// {
-//   #ifdef DEBUG
-//   Serial.print(topic);
-//   Serial.print(" => ");
-//   Serial.print(payload);
-//   Serial.println();
-//   #endif
+uint8_t getValueFromMsg(MessageData *msg_data)
+{
+    MQTTMessage *message = msg_data->message;
+    string payload(static_cast<char*>(message->payload), message->payloadlen);
+    return stoi(payload);
+}
 
-//   if (topic.indexOf(ledDimmer1.getMqttTopic()) >= 0)
-//   {
-//     int value = atoi(payload.c_str());
-//     ledDimmer1.setValue(value);
-//   }
-//   else if (topic.indexOf(ledDimmer2.getMqttTopic()) >= 0)
-//   {
-//     int value = atoi(payload.c_str());
-//     ledDimmer2.setValue(value);
-//   }
-//   else if (topic.indexOf(ledDimmer3.getMqttTopic()) >= 0)
-//   {
-//     int value = atoi(payload.c_str());
-//     ledDimmer3.setValue(value);
-//   }
-//   else if (topic.indexOf(ledDimmer4.getMqttTopic()) >= 0)
-//   {
-//     int value = atoi(payload.c_str());
-//     ledDimmer4.setValue(value);
-//   }
-//   else
-//   {
-//     #ifdef DEBUG
-//     Serial.println("unknown");
-//     #endif
-//   }
-// }
+static void handle_pwm_message(MessageData *msg_data, PWMchannel& channel)
+{
+    log("MQTT", "received: " + channel.topicCmnd);
+    auto value = getValueFromMsg(msg_data) * 2.55;
+    log("MQTT", value);
+    setMqttPwmTarget(channel, value);
+    sendMqtt(channel.topicStat, value);
+}
+
+static void message_arrived_pwm1(MessageData *msg_data) {handle_pwm_message(msg_data, pwm1);};
+static void message_arrived_pwm2(MessageData *msg_data) {handle_pwm_message(msg_data, pwm2);};
+static void message_arrived_pwm3(MessageData *msg_data) {handle_pwm_message(msg_data, pwm3);};
+static void message_arrived_pwm4(MessageData *msg_data) {handle_pwm_message(msg_data, pwm4);};
+static void message_arrived_pwm5(MessageData *msg_data) {handle_pwm_message(msg_data, pwm5);};
+static void message_arrived_pwm6(MessageData *msg_data) {handle_pwm_message(msg_data, pwm6);};
+
+void message_arrived(MessageData *msg_data)
+{
+    log("MQTT", "received");
+    MQTTMessage *message = msg_data->message;
+    string topic(msg_data->topicName->lenstring.data, msg_data->topicName->lenstring.len);
+    log("MQTT", topic);
+    string payload(static_cast<char*>(message->payload), message->payloadlen);
+    log("MQTT", payload);
+
+    int value = stoi(payload);
+}
+
+void configPWM(const uint8_t pinNo)
+{
+    // Tell the LED pin that the PWM is in charge of its value.
+    gpio_set_function(pinNo, GPIO_FUNC_PWM);
+    // Figure out which slice we just connected to the LED pin
+    uint slice_num = pwm_gpio_to_slice_num(pinNo);
+
+    // Mask our slice's IRQ output into the PWM block's single interrupt line,
+    // and register our interrupt handler
+    pwm_clear_irq(slice_num);
+    pwm_set_irq_enabled(slice_num, true);
+    irq_set_exclusive_handler(PWM_IRQ_WRAP, on_pwm_wrap);
+    irq_set_enabled(PWM_IRQ_WRAP, true);
+
+    // Get some sensible defaults for the slice configuration. By default, the
+    // counter is allowed to wrap over its maximum range (0 to 2**16-1)
+    pwm_config config = pwm_get_default_config();
+    // Set divider, reduces counter clock to sysclock/this value
+    pwm_config_set_clkdiv(&config, 4.f);
+    // Load the configuration into our PWM slice, and set it running.
+    pwm_init(slice_num, &config, true);
+
+    // Everything after this point happens in the PWM interrupt handler, so we
+    // can twiddle our thumbs
+}
+
+uint16_t calculatePWMValue(PWMchannel& channel)
+{
+    if (channel.targetPWM != channel.currentPWM)
+    {
+        if (channel.targetPWM > channel.currentPWM)
+            channel.currentPWM++;
+        else if (channel.targetPWM < channel.currentPWM)
+            channel.currentPWM--;
+    }
+
+    return channel.currentPWM * channel.currentPWM;
+}
+
+void setPWMValue(PWMchannel& channel)
+{
+    pwm_clear_irq(pwm_gpio_to_slice_num(channel.pinNo));
+    uint16_t value = calculatePWMValue(channel);
+    pwm_set_gpio_level(channel.pinNo, value);
+}
+
+void on_pwm_wrap() {
+    static int fade = 0;
+    static bool going_up = true;
+    // Clear the interrupt flag that brought us here
+    setPWMValue(pwm1);
+    setPWMValue(pwm2);
+    setPWMValue(pwm3);
+    setPWMValue(pwm4);
+    setPWMValue(pwm5);
+    setPWMValue(pwm6);
+}

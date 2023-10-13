@@ -32,15 +32,15 @@ const float MAX_ADC_V = 5.0;
 
 // Ethernet config
 #define MAC      { 0x00, 0x08, 0xDC, 0x12, 0x34, 0x56 }
-#define IP       { 192, 168, 38, 22 }
+#define IP       { 192, 168, 116, 222 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define GATEWAY  { 192, 168, 38, 1 }
+#define GATEWAY  { 192, 168, 116, 1 }
 #define DNS      { 8, 8, 8, 8 }
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
-#define MQTT_KEEP_ALIVE 60 // 60 milliseconds
-#define MQTT_SERVER { 192, 168, 38, 11 }
+#define MQTT_KEEP_ALIVE 1000 // 1000 milliseconds
+#define MQTT_SERVER { 192, 168, 116, 135 }
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
@@ -51,6 +51,7 @@ const string MQTT_PASSWORD = "0123456789";
 const string deviceName = "CT01";
 const string cmndSufix  = "/cmnd";
 
+const string statusTopic      = deviceName + "/status";
 const string uptimeTopic      = deviceName + "/uptime";
 
 const string pir1Topic        = deviceName + "/move1";
@@ -58,12 +59,14 @@ const string pir2Topic        = deviceName + "/move2";
 const string pir3Topic        = deviceName + "/move3";
 const string pir4Topic        = deviceName + "/move4";
 const string pir5Topic        = deviceName + "/move5";
+const string pir6Topic        = deviceName + "/move6";
+const string pir7Topic        = deviceName + "/move7";
+const string pir8Topic        = deviceName + "/move8";
+const string pir9Topic        = deviceName + "/move9";
 
 const string light1Topic      = deviceName + "/light1";
 const string light2Topic      = deviceName + "/light2";
 const string light3Topic      = deviceName + "/light3";
-const string light4Topic      = deviceName + "/light4";
-const string light5Topic      = deviceName + "/light5";
 
 const string pwm1TopicStat    = deviceName + "/pwm1";
 const string pwm2TopicStat    = deviceName + "/pwm2";
@@ -78,28 +81,101 @@ const string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
 const string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
 const string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
 
+const int PWM1Pin = 3;
+const int PWM2Pin = 22;
+const int PWM3Pin = 21;
+const int PWM4Pin = 11;
+const int PWM5Pin = 13;
+const int PWM6Pin = 14;
 
-// Status LED config
-// const int StatusPin = 8; // GPIO3 -> PB0
-// PIR config
-// const int Pir1Pin   = 7;  // GPIO2 -> PD7
-// const int Pir2Pin   = 8;  // GPIO3 -> PB0
-// const int Pir3Pin   = A7; // ADC7 -> P
-// const int Pir4Pin   = 1;  // TX -> PD1
-// const int Pir5Pin   = 0;  // RX -> PD0
-// const int Pir6Pin   = 4;  // GPIO1 -> PD4
-// const int Pir7Pin   = 2;  // GPIO0 -> PD2
+const int Port1PirLPin = 15;   // [x][][][][][] PIN 3 Left
+const int Port1PirRPin = 12;   // [x][][][][][] PIN 4 Right
+const int Port2PirLPin = 10;   // [][x][][][][] PIN 3 Left
+const int Port2PirRPin = 9;    // [][x][][][][] PIN 4 Right
+const int Port3PirLPin = 8;    // [][][x][][][] PIN 3 Left
+const int Port3PirRPin = 7;    // [][][x][][][] PIN 4 Right
+const int Port4PirRPin = 6;    // [][][][x][][] PIN 4 Right
+const int Port5PirRPin = 5;    // [][][][][x][] PIN 4 Right
+const int Port6PirRPin = 4;    // [][][][][][x] PIN 4 Right
 
-// // Light config
-// const int Light1Pin = A2; // ADC2 -> PC2
-// const int Light2Pin = A3; // ADC3 -> PC3
-// const int Light3Pin = A6; // ADC6 -> P
-// const int Light4Pin = A4; // ADC4 -> PC4
-// const int Light5Pin = A5; // ADC5 -> PC5
-// const int Light6Pin = A1; // ADC1 -> PC1
-// const int Light7Pin = A0; // ADC0 -> PC0
+const int Port4ADCLPin = 26;   // [][][][x][][] PIN 3 Left
+const int Port5ADCLPin = 27;   // [][][][][x][] PIN 3 Left
+const int Port6ADCLPin = 28;   // [][][][][][x] PIN 3 Left
 
-// const int Led1Pin = 9;  // PWM1 -> PB1
-// const int Led2Pin = 6;  // PWM2 -> PD6
-// const int Led3Pin = 5;  // PWM3 -> PD5
-// const int Led4Pin = 3;  // PWM0 -> PD3
+const int Port4ADCinput = 0;
+const int Port5ADCinput = 1;
+const int Port6ADCinput = 2;
+
+typedef struct ADCchannel
+{
+    bool initDone;
+    uint16_t measuredValue;
+    uint16_t lastReportedValue;
+    const string& topicStat;
+    const uint8_t pinNo;
+    const uint8_t channelNo;
+
+    ADCchannel(const string& _topicStat, const uint8_t _pinNo, const uint8_t _channelNo)
+     : initDone(false)
+     , measuredValue(0)
+     , lastReportedValue(0)
+     , topicStat(_topicStat)
+     , pinNo(_pinNo)
+     , channelNo(_channelNo)
+    {}
+} ADCchannel;
+
+typedef struct PIR
+{
+    bool initDone;
+    bool measuredValue;
+    bool lastReportedValue;
+    const string& topicStat;
+    const uint8_t pinNo;
+
+    PIR(const string& _topicStat, const uint8_t _pinNo)
+     : initDone(false) 
+     , measuredValue(false)
+     , lastReportedValue(false)
+     , topicStat(_topicStat)
+     , pinNo(_pinNo)
+    {}
+} PIR;
+
+typedef struct PWMchannel
+{
+    uint8_t targetPWM;
+    uint8_t currentPWM;
+    const string& topicStat;
+    const string& topicCmnd;
+    const uint8_t pinNo;
+
+    PWMchannel(const string& _topicStat, const string& _topicCmnd, const uint8_t _pinNo)
+     : targetPWM(0)
+     , currentPWM(0)
+     , topicStat(_topicStat)
+     , topicCmnd(_topicCmnd)
+     , pinNo(_pinNo)
+    {}
+} PWMchannel;
+
+PWMchannel pwm1 = PWMchannel(pwm1TopicStat, pwm1TopicCmnd, PWM1Pin);
+PWMchannel pwm2 = PWMchannel(pwm2TopicStat, pwm2TopicCmnd, PWM2Pin);
+PWMchannel pwm3 = PWMchannel(pwm3TopicStat, pwm3TopicCmnd, PWM3Pin);
+PWMchannel pwm4 = PWMchannel(pwm4TopicStat, pwm4TopicCmnd, PWM4Pin);
+PWMchannel pwm5 = PWMchannel(pwm5TopicStat, pwm5TopicCmnd, PWM5Pin);
+PWMchannel pwm6 = PWMchannel(pwm6TopicStat, pwm6TopicCmnd, PWM6Pin);
+
+ADCchannel adc1 = ADCchannel(light1Topic, Port4ADCLPin, Port4ADCinput);
+ADCchannel adc2 = ADCchannel(light2Topic, Port5ADCLPin, Port5ADCinput);
+ADCchannel adc3 = ADCchannel(light3Topic, Port6ADCLPin, Port6ADCinput);
+
+PIR pir1 = PIR(pir1Topic, Port1PirLPin);
+PIR pir2 = PIR(pir2Topic, Port1PirRPin);
+PIR pir3 = PIR(pir3Topic, Port2PirLPin);
+PIR pir4 = PIR(pir4Topic, Port2PirRPin);
+PIR pir5 = PIR(pir5Topic, Port3PirLPin);
+PIR pir6 = PIR(pir6Topic, Port3PirRPin);
+PIR pir7 = PIR(pir7Topic, Port4PirRPin);
+PIR pir8 = PIR(pir8Topic, Port5PirRPin);
+PIR pir9 = PIR(pir9Topic, Port6PirRPin);

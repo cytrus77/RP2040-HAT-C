@@ -6,8 +6,10 @@ add_executable(${TARGET_NAME}
 
 target_link_libraries(${TARGET_NAME} PRIVATE
         pico_stdlib
+        hardware_adc
         hardware_spi
         hardware_dma
+        hardware_pwm
         ETHERNET_FILES
         IOLIBRARY_FILES
         MQTT_FILES
