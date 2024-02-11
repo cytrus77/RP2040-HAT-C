@@ -62,6 +62,8 @@ static Network g_mqtt_network;
 static MQTTClient g_mqtt_client;
 static MQTTPacket_connectData g_mqtt_packet_connect_data = MQTTPacket_connectData_initializer;
 static MQTTMessage g_mqtt_message;
+// Last Will Testament for MQTT
+static MQTTPacket_willOptions g_mqtt_will_options = MQTTPacket_willOptions_initializer;
 
 /* Timer  */
 static volatile uint32_t g_msec_cnt = 0;
@@ -114,13 +116,7 @@ int main()
     set_clock_khz();
     stdio_init_all();
 
-    // if (watchdog_caused_reboot()) {
-    //     log("System", "Rebooted by Watchdog!");
-    //     return 0;
-    // } else {
-    //     log("System", "Clean boot");
-    // }
-    // watchdog_enable(1000, 1);
+    watchdog_enable(10000, false);
 
     pirInit(pir1.pinNo, &gpio_callback);
     pirInit(pir2.pinNo, &gpio_callback);
@@ -150,16 +146,23 @@ int main()
     int32_t retval = 0;
     uint32_t start_ms = 0;
     uint32_t end_ms = 0;
+    bool initDone = false;
 
     start_ms = millis();
 
     /* Infinite loop */
     while (1)
     {
-        // watchdog_update();
-
         if (g_mqtt_client.isconnected)
         {
+            watchdog_update();
+
+            if (!initDone)
+            {
+                auto initRet = sendMqtt(willTopic, willMessageOn);
+                initDone = initRet;
+            }
+
             bool result = true;
             if ((retval = MQTTYield(&g_mqtt_client, g_mqtt_packet_connect_data.keepAliveInterval)) < 0)
             {
@@ -171,7 +174,7 @@ int main()
 
             if (end_ms > start_ms + MQTT_PUBLISH_PERIOD)
             {
-                result = sendMqtt(uptimeTopic, millis()/1000);
+                result = sendMqtt(uptimeTopic, millis()/1000) && result;
                 start_ms = millis();
 
                 processADC(adc1);
@@ -187,6 +190,7 @@ int main()
         else
         {
             mqttConnect();
+            initDone = false;
         }
     }
 }
@@ -319,7 +323,6 @@ void networkConfig()
     wizchip_check();
 
     wizchip_1ms_timer_initialize(repeating_timer_callback);
-
     network_initialize(g_net_info);
 
     /* Get network information */
@@ -371,12 +374,16 @@ void mqttConnect()
     /* Connect to the MQTT broker */
     g_mqtt_packet_connect_data.MQTTVersion = 3;
     g_mqtt_packet_connect_data.cleansession = 1;
-    g_mqtt_packet_connect_data.willFlag = 0;
+    g_mqtt_packet_connect_data.willFlag = 1;
     g_mqtt_packet_connect_data.keepAliveInterval = MQTT_KEEP_ALIVE;
     g_mqtt_packet_connect_data.clientID.cstring = const_cast<char*>(MQTT_CLIENT_ID.c_str());
     g_mqtt_packet_connect_data.username.cstring = const_cast<char*>(MQTT_USERNAME.c_str());
     g_mqtt_packet_connect_data.password.cstring = const_cast<char*>(MQTT_PASSWORD.c_str());
-
+    g_mqtt_packet_connect_data.will = g_mqtt_will_options;
+    g_mqtt_will_options.topicName.cstring = const_cast<char*>(willTopic.c_str());
+    g_mqtt_will_options.message.cstring   = const_cast<char*>(willMessageOff.c_str());
+    g_mqtt_will_options.retained = 1;
+    
     retval = MQTTConnect(&g_mqtt_client, &g_mqtt_packet_connect_data);
 
     if (retval < 0)

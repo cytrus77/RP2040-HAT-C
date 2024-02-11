@@ -250,7 +250,7 @@ void network_initialize(wiz_NetInfo net_info)
 
 void print_network_information(wiz_NetInfo net_info)
 {
-    uint8_t tmp_str[8] = {
+    uint8_t tmp_str[12] = {
         0,
     };
 

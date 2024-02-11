@@ -31,16 +31,16 @@ const float MAX_ADC_V = 5.0;
 // const AnalogSensor::SScaler ANALOG_SCALER = AnalogSensor::SScaler(0, 1024, 100, 0);
 
 // Ethernet config
-#define MAC      { 0x00, 0x08, 0xDC, 0x12, 0x34, 0x56 }
-#define IP       { 192, 168, 116, 222 }
+#define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
+#define IP       { 192, 168, 38, 222 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define GATEWAY  { 192, 168, 116, 1 }
+#define GATEWAY  { 192, 168, 38, 1 }
 #define DNS      { 8, 8, 8, 8 }
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
-#define MQTT_KEEP_ALIVE 1000 // 1000 milliseconds
-#define MQTT_SERVER { 192, 168, 116, 135 }
+#define MQTT_KEEP_ALIVE 10 // milliseconds
+#define MQTT_SERVER { 192, 168, 38, 207 }
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
@@ -48,11 +48,14 @@ const string MQTT_CLIENT_ID = "rpi-pico";
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
-const string deviceName = "CT01";
+const string deviceName = "CT01X";
 const string cmndSufix  = "/cmnd";
 
 const string statusTopic      = deviceName + "/status";
 const string uptimeTopic      = deviceName + "/uptime";
+const string willTopic        = deviceName + "/LWT";
+const string willMessageOff   = "offline";
+const string willMessageOn    = "online";
 
 const string pir1Topic        = deviceName + "/move1";
 const string pir2Topic        = deviceName + "/move2";
