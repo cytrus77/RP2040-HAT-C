@@ -1,3 +1,5 @@
 add_subdirectory(publish)
 add_subdirectory(publish_subscribe)
 add_subdirectory(subscribe)
+add_subdirectory(publish_subscribe_bolo_alarm)
+add_subdirectory(publish_subscribe_zielone_ogrody)
