@@ -30,25 +30,37 @@ const unsigned int ANALOG_PERIOD_MS = 3000;
 const float MAX_ADC_V = 5.0;
 // const AnalogSensor::SScaler ANALOG_SCALER = AnalogSensor::SScaler(0, 1024, 100, 0);
 
-#define MAC      { 0x00, 0x08, 0xDC, 0x10, 0x14, 0x73 }
-#define IP       { 192, 168, 101, 13 }
-#define GATEWAY  { 192, 168, 101, 1 }
-#define MQTT_SERVER { 192, 168, 101, 10 }
-const string MQTT_CLIENT_ID = "CT-pico-3";
-const string deviceName = "CTpico3";
+// Darunia
+#define MAC      { 0x00, 0x08, 0xDC, 0xDA, 0xCD, 0x01 }
+#define IP       { 192, 168, 17, 31 }
+#define GATEWAY  { 192, 168, 17, 1 }
+#define SUBNET   { 255, 255, 255, 0 }
+#define MQTT_SERVER { 192, 168, 17, 30 }
+#define DNS      { 8, 8, 8, 8 }
+const string MQTT_CLIENT_ID = "CT-pico-1";
+const string deviceName = "CTpico1";
 
+// WLKP
+// #define MAC      { 0x00, 0x08, 0xDC, 0xDA, 0xCD, 0x01 }
+// #define IP       { 192, 168, 116, 136 }
+// #define GATEWAY  { 192, 168, 116, 1 }
+// #define SUBNET   { 255, 255, 255, 0 }
+// #define MQTT_SERVER { 192, 168, 116, 135 }
+// #define DNS      { 8, 8, 8, 8 }
+// const string MQTT_CLIENT_ID = "CT-pico-1";
+// const string deviceName = "CTpico1";
 
 // Ethernet config
-#define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
-#define IP       { 192, 168, 38, 222 }
-#define SUBNET   { 255, 255, 255, 0 }
-#define GATEWAY  { 192, 168, 38, 1 }
-#define DNS      { 8, 8, 8, 8 }
+// #define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
+// #define IP       { 192, 168, 38, 222 }
+// #define SUBNET   { 255, 255, 255, 0 }
+// #define GATEWAY  { 192, 168, 38, 1 }
+// #define DNS      { 8, 8, 8, 8 }
+// #define MQTT_SERVER { 192, 168, 38, 207 }
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
 #define MQTT_KEEP_ALIVE 10 // milliseconds
-#define MQTT_SERVER { 192, 168, 38, 207 }
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
@@ -56,7 +68,6 @@ const uint16_t MQTT_PORT = 1883;
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
-const string deviceName = "CT01X";
 const string cmndSufix  = "/cmnd";
 
 const string statusTopic      = deviceName + "/status";
