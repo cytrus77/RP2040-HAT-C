@@ -21,20 +21,34 @@ using namespace std;
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
+//======================================================================================
 
 // Ethernet config
-// Bolus Ratusz
-#define MAC      { 0x00, 0x08, 0xDC, 0x45, 0xA8, 0x11 }
-#define IP       { 192, 168, 89, 101 }
+// // Bolus Ratusz
+// #define MAC      { 0x00, 0x08, 0xDC, 0x45, 0xA8, 0x11 }
+// #define IP       { 192, 168, 89, 101 }
+// #define SUBNET   { 255, 255, 254, 0 }
+// #define GATEWAY  { 192, 168, 88, 1 }
+// #define MQTT_SERVER { 192, 168, 89, 100 }
+
+
+// Bolus Ogrodek Alarm
+#define MAC      { 0x00, 0x08, 0xDC, 0x75, 0xB0, 0x21 }
+#define IP       { 192, 168, 89, 104 }
 #define SUBNET   { 255, 255, 254, 0 }
 #define GATEWAY  { 192, 168, 88, 1 }
 #define MQTT_SERVER { 192, 168, 89, 100 }
-// WLKP
-// #define MAC      { 0x00, 0x08, 0xDC, 0xE8, 0xA8, 0x11 }
+
+
+// // WLKP
+// #define MAC      { 0x00, 0x08, 0xDC, 0xC8, 0x76, 0x21 }
 // #define IP       { 192, 168, 116, 199 }
 // #define SUBNET   { 255, 255, 255, 0 }
 // #define GATEWAY  { 192, 168, 116, 1 }
 // #define MQTT_SERVER { 192, 168, 116, 135 }
+
+//======================================================================================
+
 #define DNS      { 8, 8, 8, 8 }
 
 /* MQTT IP */
