@@ -21,6 +21,8 @@
 // #include "timer.h"     // covered by extern "C
 #include "mqtt_interface.h"
 #include "MQTTClient.h"
+#include "dhcp.h"
+#include "dns.h"
 
 #include "defines.h"
 
@@ -33,6 +35,19 @@
 #include "hardware/pwm.h"
 #include "hardware/watchdog.h"
 /* pico include end */
+
+// Ethernet
+extern "C" void wizchip_spi_initialize(void);
+extern "C" void wizchip_cris_initialize(void);
+extern "C" void wizchip_reset(void);
+extern "C" void wizchip_initialize(void);
+extern "C" void wizchip_check(void);
+extern "C" void network_initialize(wiz_NetInfo net_info);
+extern "C" void print_network_information(wiz_NetInfo net_info);
+extern "C" void wizchip_1ms_timer_initialize(void (*callback)(void));
+extern "C" void wizchip_delay_ms(uint32_t ms);
+extern "C" void DNS_init(uint8_t s, uint8_t * buf);
+extern "C" uint8_t DHCP_run(void);
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -47,8 +62,20 @@ static wiz_NetInfo g_net_info =
         .sn  = SUBNET,                      // Subnet Mask
         .gw  = GATEWAY,                     // Gateway
         .dns = DNS,                         // DNS server
-        .dhcp = NETINFO_STATIC              // DHCP enable/disable
+        .dhcp = NETINFO_DHCP                // DHCP enable/disable
+        // .dhcp = NETINFO_STATIC              // DHCP enable/disable
 };
+
+static uint8_t g_ethernet_buf[ETHERNET_BUF_MAX_SIZE] = {
+    0,
+}; // common buffer
+
+/* DHCP */
+static uint8_t g_dhcp_get_ip_flag = 0;
+
+static void wizchip_dhcp_init(void);
+static void wizchip_dhcp_assign(void);
+static void wizchip_dhcp_conflict(void);
 
 /* MQTT */
 static uint8_t g_mqtt_send_buf[ETHERNET_BUF_MAX_SIZE] = {
@@ -147,6 +174,7 @@ int main()
     uint32_t start_ms = 0;
     uint32_t end_ms = 0;
     bool initDone = false;
+    uint8_t dhcp_retry = 0;
 
     start_ms = millis();
 
@@ -189,6 +217,39 @@ int main()
         }
         else
         {
+            /* Assigned IP through DHCP */
+            if (g_net_info.dhcp == NETINFO_DHCP)
+            {
+                retval = DHCP_run();
+
+                if (retval == DHCP_IP_LEASED)
+                {
+                    if (g_dhcp_get_ip_flag == 0)
+                    {
+                        printf(" DHCP success\n");
+                        g_dhcp_get_ip_flag = 1;
+                    }
+                }
+                else if (retval == DHCP_FAILED)
+                {
+                    g_dhcp_get_ip_flag = 0;
+                    dhcp_retry++;
+
+                    if (dhcp_retry <= DHCP_RETRY_COUNT)
+                    {
+                        printf(" DHCP timeout occurred and retry %d\n", dhcp_retry);
+                    }
+                }
+
+                if (dhcp_retry > DHCP_RETRY_COUNT)
+                {
+                    printf(" DHCP failed\n");
+                    DHCP_stop();
+                }
+
+                wizchip_delay_ms(1000); // wait for 1 second
+            }
+
             mqttConnect();
             initDone = false;
         }
@@ -301,15 +362,6 @@ uint16_t readADC(ADCchannel& channel)
     return adc_read();
 }
 
-// MQTT
-extern "C" void wizchip_spi_initialize(void);
-extern "C" void wizchip_cris_initialize(void);
-extern "C" void wizchip_reset(void);
-extern "C" void wizchip_initialize(void);
-extern "C" void wizchip_check(void);
-extern "C" void network_initialize(wiz_NetInfo net_info);
-extern "C" void print_network_information(wiz_NetInfo net_info);
-extern "C" void wizchip_1ms_timer_initialize(void (*callback)(void));
 
 ///////////===================================================================
 
@@ -323,7 +375,20 @@ void networkConfig()
     wizchip_check();
 
     wizchip_1ms_timer_initialize(repeating_timer_callback);
-    network_initialize(g_net_info);
+
+    if (g_net_info.dhcp == NETINFO_DHCP) // DHCP
+    {
+        wizchip_dhcp_init();
+    }
+    else // static
+    {
+        network_initialize(g_net_info);
+
+        /* Get network information */
+        print_network_information(g_net_info);
+    }
+
+    DNS_init(SOCKET_DNS, g_ethernet_buf);
 
     /* Get network information */
     print_network_information(g_net_info);
@@ -538,4 +603,40 @@ void on_pwm_wrap() {
     setPWMValue(pwm4);
     setPWMValue(pwm5);
     setPWMValue(pwm6);
+}
+
+
+/* DHCP */
+static void wizchip_dhcp_init(void)
+{
+    printf(" DHCP client running\n");
+
+    DHCP_init(SOCKET_DHCP, g_ethernet_buf);
+
+    reg_dhcp_cbfunc(wizchip_dhcp_assign, wizchip_dhcp_assign, wizchip_dhcp_conflict);
+}
+
+static void wizchip_dhcp_assign(void)
+{
+    getIPfromDHCP(g_net_info.ip);
+    getGWfromDHCP(g_net_info.gw);
+    getSNfromDHCP(g_net_info.sn);
+    getDNSfromDHCP(g_net_info.dns);
+
+    g_net_info.dhcp = NETINFO_DHCP;
+
+    /* Network initialize */
+    network_initialize(g_net_info); // apply from DHCP
+
+    print_network_information(g_net_info);
+    printf(" DHCP leased time : %ld seconds\n", getDHCPLeasetime());
+}
+
+static void wizchip_dhcp_conflict(void)
+{
+    printf(" Conflict IP from DHCP\n");
+
+    // halt or reset or any...
+    while (1)
+        ; // this example is halt.
 }

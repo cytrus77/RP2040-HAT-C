@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -17,6 +18,12 @@ using namespace std;
 
 /* Socket */
 #define SOCKET_MQTT 0
+#define SOCKET_DHCP 0
+#define SOCKET_DNS 1
+
+/* Retry count */
+#define DHCP_RETRY_COUNT 5
+#define DNS_RETRY_COUNT 5
 
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
@@ -30,25 +37,34 @@ const unsigned int ANALOG_PERIOD_MS = 3000;
 const float MAX_ADC_V = 5.0;
 // const AnalogSensor::SScaler ANALOG_SCALER = AnalogSensor::SScaler(0, 1024, 100, 0);
 
-// Darunia
-#define MAC      { 0x00, 0x08, 0xDC, 0xDA, 0xCD, 0x01 }
-#define IP       { 192, 168, 17, 31 }
-#define GATEWAY  { 192, 168, 17, 1 }
-#define SUBNET   { 255, 255, 255, 0 }
-#define MQTT_SERVER { 192, 168, 17, 30 }
-#define DNS      { 8, 8, 8, 8 }
-const string MQTT_CLIENT_ID = "CT-pico-1";
-const string deviceName = "CTpico1";
+std::string charToHexString(char input) {
+    const char hexDigits[] = "0123456789ABCDEF";
+    std::string result;
+    result += hexDigits[(input >> 4) & 0x0F];  // Extract the high nibble
+    result += hexDigits[input & 0x0F];         // Extract the low nibble
+    return result;
+}
 
-// WLKP
+// Darunia
 // #define MAC      { 0x00, 0x08, 0xDC, 0xDA, 0xCD, 0x01 }
-// #define IP       { 192, 168, 116, 136 }
-// #define GATEWAY  { 192, 168, 116, 1 }
+// #define IP       { 192, 168, 17, 31 }
+// #define GATEWAY  { 192, 168, 17, 1 }
 // #define SUBNET   { 255, 255, 255, 0 }
-// #define MQTT_SERVER { 192, 168, 116, 135 }
+// #define MQTT_SERVER { 192, 168, 17, 30 }
 // #define DNS      { 8, 8, 8, 8 }
 // const string MQTT_CLIENT_ID = "CT-pico-1";
 // const string deviceName = "CTpico1";
+
+// WLKP
+#define MAC      { 0x00, 0x08, 0xDC, 0x77, 0xCD, 0x01 }
+#define IP       { 192, 168, 116, 131 }
+#define GATEWAY  { 192, 168, 116, 1 }
+#define SUBNET   { 255, 255, 255, 0 }
+#define MQTT_SERVER { 192, 168, 116, 135 }
+#define DNS      { 8, 8, 8, 8 }
+const std::vector<char> macAddr = MAC;
+const string MQTT_CLIENT_ID = "CT-pico-combo-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+const string deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
 
 // Ethernet config
 // #define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
