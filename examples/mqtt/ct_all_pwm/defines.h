@@ -22,12 +22,12 @@ using namespace std;
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
 // Ethernet config
-#define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
-#define IP       { 192, 168, 116, 222 }
+#define MAC      { 0x00, 0x08, 0xDC, 0xA8, 0x32, 0xE0 }
+#define IP       { 192, 168, 13, 42 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define GATEWAY  { 192, 168, 116, 1 }
+#define GATEWAY  { 192, 168, 13, 1 }
 #define DNS      { 8, 8, 8, 8 }
-#define MQTT_SERVER { 192, 168, 116, 135 }
+#define MQTT_SERVER { 192, 168, 13, 40 }
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
@@ -35,11 +35,11 @@ using namespace std;
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
-const string MQTT_CLIENT_ID = "rpi-pico";
+const string MQTT_CLIENT_ID = "ct-pico-up1";
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
-const string deviceName = "CT01X";
+const string deviceName = "CT-Pico-up1";
 const string cmndSufix  = "/cmnd";
 
 const string statusTopic      = deviceName + "/status";

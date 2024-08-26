@@ -12,6 +12,8 @@ target_link_libraries(${TARGET_NAME} PRIVATE
         hardware_pwm
         ETHERNET_FILES
         IOLIBRARY_FILES
+        DHCP_FILES
+        DNS_FILES
         MQTT_FILES
         TIMER_FILES
         )

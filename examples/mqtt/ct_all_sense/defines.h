@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -17,11 +18,31 @@ using namespace std;
 
 /* Socket */
 #define SOCKET_MQTT 0
+#define SOCKET_DHCP 0
+#define SOCKET_DNS 1
+
+/* Retry count */
+#define DHCP_RETRY_COUNT 5
+#define DNS_RETRY_COUNT 5
 
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
 //======================================================================================
+
+std::string charToHexString(char input) {
+    const char hexDigits[] = "0123456789ABCDEF";
+    std::string result;
+    result += hexDigits[(input >> 4) & 0x0F];  // Extract the high nibble
+    result += hexDigits[input & 0x0F];         // Extract the low nibble
+    return result;
+}
+
+// GENERIC CONF
+#define IP       { 192, 168, 38, 111 }
+#define SUBNET   { 255, 255, 255, 0 }
+#define GATEWAY  { 192, 168, 38, 1 }
+#define DNS      { 8, 8, 8, 8 }
 
 // Ethernet config
 // // Bolus Ratusz
@@ -33,11 +54,21 @@ using namespace std;
 
 
 // Bolus Ogrodek Alarm
-#define MAC      { 0x00, 0x08, 0xDC, 0x75, 0xB0, 0x21 }
-#define IP       { 192, 168, 89, 104 }
-#define SUBNET   { 255, 255, 254, 0 }
-#define GATEWAY  { 192, 168, 88, 1 }
-#define MQTT_SERVER { 192, 168, 89, 100 }
+// #define MAC      { 0x00, 0x08, 0xDC, 0x75, 0xB0, 0x21 }
+// #define MQTT_SERVER { 192, 168, 89, 100 }
+
+// Bolus Ratusz Alarm
+// #define MAC      { 0x00, 0x08, 0xDC, 0x75, 0xE3, 0x27 }
+// #define MQTT_SERVER { 192, 168, 89, 100 }
+
+// Kleczko
+#define MAC      { 0x2C, 0x08, 0xDC, 0xAD, 0x3D, 0x94 }
+#define MQTT_SERVER { 192, 168, 38, 11 }
+
+// #define IP       { 192, 168, 89, 104 }
+// #define SUBNET   { 255, 255, 254, 0 }
+// #define GATEWAY  { 192, 168, 88, 1 }
+// #define MQTT_SERVER { 192, 168, 89, 100 }
 
 
 // // WLKP
@@ -49,19 +80,18 @@ using namespace std;
 
 //======================================================================================
 
-#define DNS      { 8, 8, 8, 8 }
-
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
 #define MQTT_KEEP_ALIVE 10 // milliseconds
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
-const string MQTT_CLIENT_ID = "rpi-pico";
+const std::vector<char> macAddr = MAC;
+const string MQTT_CLIENT_ID = "CT-pico-sens-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+const string deviceName = "CTpicoSens_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
-const string deviceName = "CT01Alarm";
 const string cmndSufix  = "/cmnd";
 
 const string statusTopic      = deviceName + "/status";
