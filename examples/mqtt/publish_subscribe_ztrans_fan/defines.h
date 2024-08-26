@@ -56,11 +56,11 @@ std::string charToHexString(char input) {
 // const string deviceName = "CTpico1";
 
 // WLKP
-#define MAC      { 0x00, 0x08, 0xDC, 0x77, 0xCD, 0x02 }
+#define MAC      { 0x00, 0x08, 0xDC, 0xC8, 0xE7, 0x82 }
 #define IP       { 192, 168, 116, 131 }
 #define GATEWAY  { 192, 168, 116, 1 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define MQTT_SERVER { 192, 168, 116, 135 }
+#define MQTT_SERVER { 192, 168, 100, 240 }
 #define DNS      { 8, 8, 8, 8 }
 const std::vector<char> macAddr = MAC;
 const string MQTT_CLIENT_ID = "CT-pico-combo-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
@@ -76,6 +76,7 @@ const string deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToH
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
+#define RPM_PUBLISH_PERIOD (1000 * 10) // 20 seconds
 #define MQTT_KEEP_ALIVE 10 // milliseconds
 const uint16_t MQTT_PORT = 1883;
 
@@ -102,6 +103,9 @@ const string pir7Topic        = deviceName + "/move7";
 const string pir8Topic        = deviceName + "/move8";
 const string pir9Topic        = deviceName + "/move9";
 
+const string rpm1Topic        = deviceName + "/rpm1";
+const string rpm2Topic        = deviceName + "/rpm2";
+
 const string light1Topic      = deviceName + "/light1";
 const string light2Topic      = deviceName + "/light2";
 const string light3Topic      = deviceName + "/light3";
@@ -119,17 +123,17 @@ const string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
 const string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
 const string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
 
-const int PWM1Pin = 3;
-const int PWM2Pin = 22;
+// const int PWM1Pin = 3;
+// const int PWM2Pin = 22;
 const int PWM3Pin = 21;
 const int PWM4Pin = 11;
 const int PWM5Pin = 13;
 const int PWM6Pin = 14;
 
-const int Port1PirLPin = 15;   // [x][][][][][] PIN 3 Left
-const int Port1PirRPin = 12;   // [x][][][][][] PIN 4 Right
-const int Port2PirLPin = 10;   // [][x][][][][] PIN 3 Left
-const int Port2PirRPin = 9;    // [][x][][][][] PIN 4 Right
+const int RPM1Pin      = 15;   // [x][][][][][] PIN 3 Left
+const int PWM1Pin      = 12;   // [x][][][][][] PIN 4 Right
+const int RPM2Pin      = 10;   // [][x][][][][] PIN 3 Left
+const int PWM2Pin      = 9;    // [][x][][][][] PIN 4 Right
 const int Port3PirLPin = 8;    // [][][x][][][] PIN 3 Left
 const int Port3PirRPin = 7;    // [][][x][][][] PIN 4 Right
 const int Port4PirRPin = 6;    // [][][][x][][] PIN 4 Right
@@ -170,6 +174,7 @@ typedef struct PIR
     bool lastReportedValue;
     const string& topicStat;
     const uint8_t pinNo;
+    uint32_t counter;
 
     PIR(const string& _topicStat, const uint8_t _pinNo)
      : initDone(false) 
@@ -177,6 +182,7 @@ typedef struct PIR
      , lastReportedValue(false)
      , topicStat(_topicStat)
      , pinNo(_pinNo)
+     , counter(0)
     {}
 } PIR;
 
@@ -208,13 +214,16 @@ ADCchannel adc1 = ADCchannel(light1Topic, Port4ADCLPin, Port4ADCinput);
 ADCchannel adc2 = ADCchannel(light2Topic, Port5ADCLPin, Port5ADCinput);
 ADCchannel adc3 = ADCchannel(light3Topic, Port6ADCLPin, Port6ADCinput);
 
-PIR pir1 = PIR(pir1Topic, Port1PirLPin);
-PIR pir2 = PIR(pir2Topic, Port1PirRPin);
-PIR pir3 = PIR(pir3Topic, Port2PirLPin);
-PIR pir4 = PIR(pir4Topic, Port2PirRPin);
+// PIR pir1 = PIR(pir1Topic, Port1PirLPin);
+// PIR pir2 = PIR(pir2Topic, Port1PirRPin);
+// PIR pir3 = PIR(pir3Topic, Port2PirLPin);
+// PIR pir4 = PIR(pir4Topic, Port2PirRPin);
 PIR pir5 = PIR(pir5Topic, Port3PirLPin);
 PIR pir6 = PIR(pir6Topic, Port3PirRPin);
 PIR pir7 = PIR(pir7Topic, Port4PirRPin);
 PIR pir8 = PIR(pir8Topic, Port5PirRPin);
 PIR pir9 = PIR(pir9Topic, Port6PirRPin);
+
+PIR rpm1 = PIR(rpm1Topic, RPM1Pin);
+PIR rpm2 = PIR(rpm2Topic, RPM2Pin);
 
