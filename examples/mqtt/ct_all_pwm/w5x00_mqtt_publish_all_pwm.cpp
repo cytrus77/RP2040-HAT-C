@@ -21,18 +21,34 @@
 // #include "timer.h"     // covered by extern "C
 #include "mqtt_interface.h"
 #include "MQTTClient.h"
+#include "dhcp.h"
+#include "dns.h"
 
 #include "defines.h"
 
 /* pico include */
 #include "pico/stdlib.h"
 #include "pico/time.h"
+#include "pico/unique_id.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
 #include "hardware/watchdog.h"
 /* pico include end */
+
+// MQTT
+extern "C" void wizchip_spi_initialize(void);
+extern "C" void wizchip_cris_initialize(void);
+extern "C" void wizchip_reset(void);
+extern "C" void wizchip_initialize(void);
+extern "C" void wizchip_check(void);
+extern "C" void network_initialize(wiz_NetInfo net_info);
+extern "C" void print_network_information(wiz_NetInfo net_info);
+extern "C" void wizchip_1ms_timer_initialize(void (*callback)(void));
+extern "C" void wizchip_delay_ms(uint32_t ms);
+extern "C" void DNS_init(uint8_t s, uint8_t * buf);
+extern "C" uint8_t DHCP_run(void);
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -49,6 +65,17 @@ static wiz_NetInfo g_net_info =
         .dns = DNS,                         // DNS server
         .dhcp = NETINFO_STATIC              // DHCP enable/disable
 };
+
+static uint8_t g_ethernet_buf[ETHERNET_BUF_MAX_SIZE] = {
+    0,
+}; // common buffer
+
+/* DHCP */
+static uint8_t g_dhcp_get_ip_flag = 0;
+
+static void wizchip_dhcp_init(void);
+static void wizchip_dhcp_assign(void);
+static void wizchip_dhcp_conflict(void);
 
 /* MQTT */
 static uint8_t g_mqtt_send_buf[ETHERNET_BUF_MAX_SIZE] = {
@@ -110,6 +137,10 @@ void on_pwm_wrap();
 void log(const string& domain, const string& log) { std::cout << domain << ": " << log << std::endl; }
 void log(const string& domain, const uint32_t value) { std::cout << domain << ": " << value << std::endl; }
 
+/* Utils */
+std::vector<unsigned char> getUniqueMAC();
+void reinitMacAndTopics();
+
 /**
  * ----------------------------------------------------------------------------------------------------
  * Main
@@ -121,6 +152,7 @@ int main()
     stdio_init_all();
 
     watchdog_enable(10000, false);
+    reinitMacAndTopics();
 
     configPWM(pwm1.pinNo);
     configPWM(pwm2.pinNo);
@@ -147,6 +179,7 @@ int main()
     uint32_t start_ms = 0;
     uint32_t end_ms = 0;
     bool initDone = false;
+    uint8_t dhcp_retry = 0;
 
     start_ms = millis();
 
@@ -185,6 +218,39 @@ int main()
         }
         else
         {
+            /* Assigned IP through DHCP */
+            if (g_net_info.dhcp == NETINFO_DHCP)
+            {
+                retval = DHCP_run();
+
+                if (retval == DHCP_IP_LEASED)
+                {
+                    if (g_dhcp_get_ip_flag == 0)
+                    {
+                        printf(" DHCP success\n");
+                        g_dhcp_get_ip_flag = 1;
+                    }
+                }
+                else if (retval == DHCP_FAILED)
+                {
+                    g_dhcp_get_ip_flag = 0;
+                    dhcp_retry++;
+
+                    if (dhcp_retry <= DHCP_RETRY_COUNT)
+                    {
+                        printf(" DHCP timeout occurred and retry %d\n", dhcp_retry);
+                    }
+                }
+
+                if (dhcp_retry > DHCP_RETRY_COUNT)
+                {
+                    printf(" DHCP failed\n");
+                    DHCP_stop();
+                }
+
+                wizchip_delay_ms(1000); // wait for 1 second
+            }
+
             mqttConnect();
             initDone = false;
         }
@@ -225,17 +291,6 @@ static time_t millis(void)
     return g_msec_cnt;
 }
 
-
-// MQTT
-extern "C" void wizchip_spi_initialize(void);
-extern "C" void wizchip_cris_initialize(void);
-extern "C" void wizchip_reset(void);
-extern "C" void wizchip_initialize(void);
-extern "C" void wizchip_check(void);
-extern "C" void network_initialize(wiz_NetInfo net_info);
-extern "C" void print_network_information(wiz_NetInfo net_info);
-extern "C" void wizchip_1ms_timer_initialize(void (*callback)(void));
-
 ///////////===================================================================
 
 void networkConfig()
@@ -248,7 +303,20 @@ void networkConfig()
     wizchip_check();
 
     wizchip_1ms_timer_initialize(repeating_timer_callback);
-    network_initialize(g_net_info);
+
+    if (g_net_info.dhcp == NETINFO_DHCP) // DHCP
+    {
+        wizchip_dhcp_init();
+    }
+    else // static
+    {
+        network_initialize(g_net_info);
+
+        /* Get network information */
+        print_network_information(g_net_info);
+    }
+
+    DNS_init(SOCKET_DNS, g_ethernet_buf);
 
     /* Get network information */
     print_network_information(g_net_info);
@@ -496,4 +564,111 @@ void on_pwm_wrap() {
     setPWMValue(pwm14);
     setPWMValue(pwm15);
     setPWMValue(pwm16);
+}
+
+/* DHCP */
+static void wizchip_dhcp_init(void)
+{
+    printf(" DHCP client running\n");
+
+    DHCP_init(SOCKET_DHCP, g_ethernet_buf);
+
+    reg_dhcp_cbfunc(wizchip_dhcp_assign, wizchip_dhcp_assign, wizchip_dhcp_conflict);
+}
+
+static void wizchip_dhcp_assign(void)
+{
+    getIPfromDHCP(g_net_info.ip);
+    getGWfromDHCP(g_net_info.gw);
+    getSNfromDHCP(g_net_info.sn);
+    getDNSfromDHCP(g_net_info.dns);
+
+    g_net_info.dhcp = NETINFO_DHCP;
+
+    /* Network initialize */
+    network_initialize(g_net_info); // apply from DHCP
+
+    print_network_information(g_net_info);
+    printf(" DHCP leased time : %ld seconds\n", getDHCPLeasetime());
+}
+
+static void wizchip_dhcp_conflict(void)
+{
+    printf(" Conflict IP from DHCP\n");
+
+    // halt or reset or any...
+    while (1)
+        ; // this example is halt.
+}
+
+std::vector<unsigned char> getUniqueMAC()
+{
+    const size_t id_size = 8;
+    size_t macByteCounter = 0;
+    pico_unique_board_id_t id;
+    pico_get_unique_board_id(&id);
+    std::vector<unsigned char> mac(6);
+    mac.at(macByteCounter++) = 0x2C;
+    mac.at(macByteCounter++) = 0x08;
+    for (int len = id_size - 4; len < id_size; len++)
+    {
+        mac.at(macByteCounter++) = id.id[len];
+    }
+
+    return mac;
+}
+
+void reinitMacAndTopics()
+{
+    macAddr = getUniqueMAC();
+    MQTT_CLIENT_ID = "CT-pico-pwm-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+    deviceName = "CTpicoPwm_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+
+    g_net_info =
+    {
+        .mac = { macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5] },             // MAC address
+        .ip  = IP,                          // IP address
+        .sn  = SUBNET,                      // Subnet Mask
+        .gw  = GATEWAY,                     // Gateway
+        .dns = DNS,                         // DNS server
+        .dhcp = NETINFO_DHCP                // DHCP enable/disable
+    };
+
+    statusTopic      = deviceName + "/status";
+    uptimeTopic      = deviceName + "/uptime";
+    willTopic        = deviceName + "/LWT";
+
+    pwm1TopicStat    = deviceName + "/pwm1";
+    pwm2TopicStat    = deviceName + "/pwm2";
+    pwm3TopicStat    = deviceName + "/pwm3";
+    pwm4TopicStat    = deviceName + "/pwm4";
+    pwm5TopicStat    = deviceName + "/pwm5";
+    pwm6TopicStat    = deviceName + "/pwm6";
+    pwm7TopicStat    = deviceName + "/pwm7";
+    pwm8TopicStat    = deviceName + "/pwm8";
+    pwm9TopicStat    = deviceName + "/pwm9";
+    pwm10TopicStat   = deviceName + "/pwm10";
+    pwm11TopicStat   = deviceName + "/pwm11";
+    pwm12TopicStat   = deviceName + "/pwm12";
+    pwm13TopicStat   = deviceName + "/pwm13";
+    pwm14TopicStat   = deviceName + "/pwm14";
+    pwm15TopicStat   = deviceName + "/pwm15";
+    pwm16TopicStat   = deviceName + "/pwm16";
+
+    pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
+    pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+    pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+    pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+    pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+    pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
+    pwm7TopicCmnd    = pwm7TopicStat + cmndSufix;
+    pwm8TopicCmnd    = pwm8TopicStat + cmndSufix;
+    pwm9TopicCmnd    = pwm9TopicStat + cmndSufix;
+    pwm10TopicCmnd   = pwm10TopicStat + cmndSufix;
+    pwm11TopicCmnd   = pwm11TopicStat + cmndSufix;
+    pwm12TopicCmnd   = pwm12TopicStat + cmndSufix;
+    pwm13TopicCmnd   = pwm13TopicStat + cmndSufix;
+    pwm14TopicCmnd   = pwm14TopicStat + cmndSufix;
+    pwm15TopicCmnd   = pwm15TopicStat + cmndSufix;
+    pwm16TopicCmnd   = pwm16TopicStat + cmndSufix;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -17,17 +18,38 @@ using namespace std;
 
 /* Socket */
 #define SOCKET_MQTT 0
+#define SOCKET_DHCP 0
+#define SOCKET_DNS 1
+
+/* Retry count */
+#define DHCP_RETRY_COUNT 5
+#define DNS_RETRY_COUNT 5
 
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
-// Ethernet config
-#define MAC      { 0x00, 0x08, 0xDC, 0xA8, 0x32, 0xE0 }
-#define IP       { 192, 168, 13, 42 }
+//======================================================================================
+
+std::string charToHexString(char input) {
+    const char hexDigits[] = "0123456789ABCDEF";
+    std::string result;
+    result += hexDigits[(input >> 4) & 0x0F];  // Extract the high nibble
+    result += hexDigits[input & 0x0F];         // Extract the low nibble
+    return result;
+}
+
+// GENERIC CONF
+#define IP       { 192, 168, 38, 111 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define GATEWAY  { 192, 168, 13, 1 }
+#define GATEWAY  { 192, 168, 38, 1 }
 #define DNS      { 8, 8, 8, 8 }
-#define MQTT_SERVER { 192, 168, 13, 40 }
+#define MAC      { 0x2C, 0x08, 0x01, 0x02, 0x03, 0x04 }
+
+// MQTT config
+// Seraf - Kobaltowa
+// #define MQTT_SERVER { 192, 168, 13, 40 }
+// WLKP
+#define MQTT_SERVER { 192, 168, 116, 135 }
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
@@ -35,52 +57,53 @@ using namespace std;
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
-const string MQTT_CLIENT_ID = "ct-pico-up1";
+std::vector<unsigned char> macAddr = MAC;
+string MQTT_CLIENT_ID = "CT-pcio-pwm-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+string deviceName = "CTpcioPwm_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
-const string deviceName = "CT-Pico-up1";
 const string cmndSufix  = "/cmnd";
 
-const string statusTopic      = deviceName + "/status";
-const string uptimeTopic      = deviceName + "/uptime";
-const string willTopic        = deviceName + "/LWT";
+string statusTopic      = deviceName + "/status";
+string uptimeTopic      = deviceName + "/uptime";
+string willTopic        = deviceName + "/LWT";
 const string willMessageOff   = "offline";
 const string willMessageOn    = "online";
 
-const string pwm1TopicStat    = deviceName + "/pwm1";
-const string pwm2TopicStat    = deviceName + "/pwm2";
-const string pwm3TopicStat    = deviceName + "/pwm3";
-const string pwm4TopicStat    = deviceName + "/pwm4";
-const string pwm5TopicStat    = deviceName + "/pwm5";
-const string pwm6TopicStat    = deviceName + "/pwm6";
-const string pwm7TopicStat    = deviceName + "/pwm7";
-const string pwm8TopicStat    = deviceName + "/pwm8";
-const string pwm9TopicStat    = deviceName + "/pwm9";
-const string pwm10TopicStat   = deviceName + "/pwm10";
-const string pwm11TopicStat   = deviceName + "/pwm11";
-const string pwm12TopicStat   = deviceName + "/pwm12";
-const string pwm13TopicStat   = deviceName + "/pwm13";
-const string pwm14TopicStat   = deviceName + "/pwm14";
-const string pwm15TopicStat   = deviceName + "/pwm15";
-const string pwm16TopicStat   = deviceName + "/pwm16";
+string pwm1TopicStat    = deviceName + "/pwm1";
+string pwm2TopicStat    = deviceName + "/pwm2";
+string pwm3TopicStat    = deviceName + "/pwm3";
+string pwm4TopicStat    = deviceName + "/pwm4";
+string pwm5TopicStat    = deviceName + "/pwm5";
+string pwm6TopicStat    = deviceName + "/pwm6";
+string pwm7TopicStat    = deviceName + "/pwm7";
+string pwm8TopicStat    = deviceName + "/pwm8";
+string pwm9TopicStat    = deviceName + "/pwm9";
+string pwm10TopicStat   = deviceName + "/pwm10";
+string pwm11TopicStat   = deviceName + "/pwm11";
+string pwm12TopicStat   = deviceName + "/pwm12";
+string pwm13TopicStat   = deviceName + "/pwm13";
+string pwm14TopicStat   = deviceName + "/pwm14";
+string pwm15TopicStat   = deviceName + "/pwm15";
+string pwm16TopicStat   = deviceName + "/pwm16";
 
-const string pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
-const string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
-const string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
-const string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
-const string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
-const string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
-const string pwm7TopicCmnd    = pwm7TopicStat + cmndSufix;
-const string pwm8TopicCmnd    = pwm8TopicStat + cmndSufix;
-const string pwm9TopicCmnd    = pwm9TopicStat + cmndSufix;
-const string pwm10TopicCmnd   = pwm10TopicStat + cmndSufix;
-const string pwm11TopicCmnd   = pwm11TopicStat + cmndSufix;
-const string pwm12TopicCmnd   = pwm12TopicStat + cmndSufix;
-const string pwm13TopicCmnd   = pwm13TopicStat + cmndSufix;
-const string pwm14TopicCmnd   = pwm14TopicStat + cmndSufix;
-const string pwm15TopicCmnd   = pwm15TopicStat + cmndSufix;
-const string pwm16TopicCmnd   = pwm16TopicStat + cmndSufix;
+string pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
+string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
+string pwm7TopicCmnd    = pwm7TopicStat + cmndSufix;
+string pwm8TopicCmnd    = pwm8TopicStat + cmndSufix;
+string pwm9TopicCmnd    = pwm9TopicStat + cmndSufix;
+string pwm10TopicCmnd   = pwm10TopicStat + cmndSufix;
+string pwm11TopicCmnd   = pwm11TopicStat + cmndSufix;
+string pwm12TopicCmnd   = pwm12TopicStat + cmndSufix;
+string pwm13TopicCmnd   = pwm13TopicStat + cmndSufix;
+string pwm14TopicCmnd   = pwm14TopicStat + cmndSufix;
+string pwm15TopicCmnd   = pwm15TopicStat + cmndSufix;
+string pwm16TopicCmnd   = pwm16TopicStat + cmndSufix;
 
 const int PWM1Pin = 28;
 const int PWM2Pin = 27;
@@ -104,11 +127,11 @@ typedef struct PWMchannel
 {
     uint8_t targetPWM;
     uint8_t currentPWM;
-    const string& topicStat;
-    const string& topicCmnd;
+    string& topicStat;
+    string& topicCmnd;
     const uint8_t pinNo;
 
-    PWMchannel(const string& _topicStat, const string& _topicCmnd, const uint8_t _pinNo)
+    PWMchannel(string& _topicStat, string& _topicCmnd, const uint8_t _pinNo)
      : targetPWM(0)
      , currentPWM(0)
      , topicStat(_topicStat)

@@ -25,6 +25,7 @@
 #include "dns.h"
 
 #include "defines.h"
+#include "all-sense-config.h"
 
 /* pico include */
 #include "pico/stdlib.h"
@@ -511,10 +512,20 @@ std::vector<unsigned char> getUniqueMAC()
     std::vector<unsigned char> mac(6);
     mac.at(macByteCounter++) = 0x2C;
     mac.at(macByteCounter++) = 0x08;
+    printf("Unique ID: ");
     for (int len = id_size - 4; len < id_size; len++)
     {
         mac.at(macByteCounter++) = id.id[len];
+        printf("%02X", id.id[len]);
     }
+    printf("\n");
+
+    printf("MAC Unquie: ");
+    for (auto& macBye : mac)
+    {
+        printf("%02X", macBye);
+    }
+        printf("\n");
 
     return mac;
 }
@@ -524,6 +535,17 @@ void reinitMacAndTopics()
     macAddr = getUniqueMAC();
     MQTT_CLIENT_ID = "CT-pico-sens-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
     deviceName = "CTpicoSens_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+
+    printf("MAC: ");
+    for (auto& macBye : macAddr)
+    {
+        printf("%02X", macBye);
+    }
+    printf("\n");
+    printf(MQTT_CLIENT_ID.c_str());
+    printf("\n");
+    printf(deviceName.c_str());
+    printf("\n");
 
     g_net_info =
     {
