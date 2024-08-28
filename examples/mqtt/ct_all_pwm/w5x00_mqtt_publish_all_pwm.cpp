@@ -105,10 +105,10 @@ static void set_clock_khz(void);
 
 /* MQTT */
 static void message_arrived_pwm1(MessageData *msg_data);
-static void message_arrived_pwm2(MessageData *msg_data);
-static void message_arrived_pwm3(MessageData *msg_data);
-static void message_arrived_pwm4(MessageData *msg_data);
-static void message_arrived_pwm5(MessageData *msg_data);
+// static void message_arrived_pwm2(MessageData *msg_data);
+// static void message_arrived_pwm3(MessageData *msg_data);
+// static void message_arrived_pwm4(MessageData *msg_data);
+// static void message_arrived_pwm5(MessageData *msg_data);
 static void message_arrived_pwm6(MessageData *msg_data);
 static void message_arrived_pwm7(MessageData *msg_data);
 static void message_arrived_pwm8(MessageData *msg_data);
@@ -155,10 +155,10 @@ int main()
     reinitMacAndTopics();
 
     configPWM(pwm1.pinNo);
-    configPWM(pwm2.pinNo);
-    configPWM(pwm3.pinNo);
-    configPWM(pwm4.pinNo);
-    configPWM(pwm5.pinNo);
+    // configPWM(pwm2.pinNo);
+    // configPWM(pwm3.pinNo);
+    // configPWM(pwm4.pinNo);
+    // configPWM(pwm5.pinNo);
     configPWM(pwm6.pinNo);
     configPWM(pwm7.pinNo);
     configPWM(pwm8.pinNo);
@@ -391,10 +391,10 @@ void mqttConnect()
 
     /* Subscribe */
     retval = MQTTSubscribe(&g_mqtt_client, pwm1.topicCmnd.c_str(), QOS0, message_arrived_pwm1);
-    retval = MQTTSubscribe(&g_mqtt_client, pwm2.topicCmnd.c_str(), QOS0, message_arrived_pwm2);
-    retval = MQTTSubscribe(&g_mqtt_client, pwm3.topicCmnd.c_str(), QOS0, message_arrived_pwm3);
-    retval = MQTTSubscribe(&g_mqtt_client, pwm4.topicCmnd.c_str(), QOS0, message_arrived_pwm4);
-    retval = MQTTSubscribe(&g_mqtt_client, pwm5.topicCmnd.c_str(), QOS0, message_arrived_pwm5);
+    // retval = MQTTSubscribe(&g_mqtt_client, pwm2.topicCmnd.c_str(), QOS0, message_arrived_pwm2);
+    // retval = MQTTSubscribe(&g_mqtt_client, pwm3.topicCmnd.c_str(), QOS0, message_arrived_pwm3);
+    // retval = MQTTSubscribe(&g_mqtt_client, pwm4.topicCmnd.c_str(), QOS0, message_arrived_pwm4);
+    // retval = MQTTSubscribe(&g_mqtt_client, pwm5.topicCmnd.c_str(), QOS0, message_arrived_pwm5);
     retval = MQTTSubscribe(&g_mqtt_client, pwm6.topicCmnd.c_str(), QOS0, message_arrived_pwm6);
     retval = MQTTSubscribe(&g_mqtt_client, pwm7.topicCmnd.c_str(), QOS0, message_arrived_pwm7);
     retval = MQTTSubscribe(&g_mqtt_client, pwm8.topicCmnd.c_str(), QOS0, message_arrived_pwm8);
@@ -468,10 +468,10 @@ static void handle_pwm_message(MessageData *msg_data, PWMchannel& channel)
 }
 
 static void message_arrived_pwm1(MessageData *msg_data) {handle_pwm_message(msg_data, pwm1);};
-static void message_arrived_pwm2(MessageData *msg_data) {handle_pwm_message(msg_data, pwm2);};
-static void message_arrived_pwm3(MessageData *msg_data) {handle_pwm_message(msg_data, pwm3);};
-static void message_arrived_pwm4(MessageData *msg_data) {handle_pwm_message(msg_data, pwm4);};
-static void message_arrived_pwm5(MessageData *msg_data) {handle_pwm_message(msg_data, pwm5);};
+// static void message_arrived_pwm2(MessageData *msg_data) {handle_pwm_message(msg_data, pwm2);};
+// static void message_arrived_pwm3(MessageData *msg_data) {handle_pwm_message(msg_data, pwm3);};
+// static void message_arrived_pwm4(MessageData *msg_data) {handle_pwm_message(msg_data, pwm4);};
+// static void message_arrived_pwm5(MessageData *msg_data) {handle_pwm_message(msg_data, pwm5);};
 static void message_arrived_pwm6(MessageData *msg_data) {handle_pwm_message(msg_data, pwm6);};
 static void message_arrived_pwm7(MessageData *msg_data) {handle_pwm_message(msg_data, pwm7);};
 static void message_arrived_pwm8(MessageData *msg_data) {handle_pwm_message(msg_data, pwm8);};
@@ -540,18 +540,32 @@ void setPWMValue(PWMchannel& channel)
 {
     pwm_clear_irq(pwm_gpio_to_slice_num(channel.pinNo));
     uint16_t value = calculatePWMValue(channel);
+    // option 1
     pwm_set_gpio_level(channel.pinNo, value);
+    // option 2
+    // uint slice_num = pwm_gpio_to_slice_num(channel.pinNo);
+    // uint pwmChannelNo = pwm_gpio_to_channel(channel.pinNo);
+    // pwm_set_chan_level(slice_num, pwmChannelNo, value);
+    // option 3
+    // uint slice_num = pwm_gpio_to_slice_num(channel.pinNo);
+    // if ( (pwm_gpio_to_channel(channel.pinNo)) == PWM_CHAN_A)
+    // {         
+    //     pwm_set_chan_level(slice_num, PWM_CHAN_A, value);
+    // }
+    // else if ( (pwm_gpio_to_channel(channel.pinNo)) == PWM_CHAN_B)
+    // {
+    //     pwm_set_chan_level(slice_num, PWM_CHAN_B, value);
+    // }
 }
 
-void on_pwm_wrap() {
-    static int fade = 0;
-    static bool going_up = true;
+void on_pwm_wrap()
+{
     // Clear the interrupt flag that brought us here
     setPWMValue(pwm1);
-    setPWMValue(pwm2);
-    setPWMValue(pwm3);
-    setPWMValue(pwm4);
-    setPWMValue(pwm5);
+    // setPWMValue(pwm2);
+    // setPWMValue(pwm3);
+    // setPWMValue(pwm4);
+    // setPWMValue(pwm5);
     setPWMValue(pwm6);
     setPWMValue(pwm7);
     setPWMValue(pwm8);
@@ -639,10 +653,10 @@ void reinitMacAndTopics()
     willTopic        = deviceName + "/LWT";
 
     pwm1TopicStat    = deviceName + "/pwm1";
-    pwm2TopicStat    = deviceName + "/pwm2";
-    pwm3TopicStat    = deviceName + "/pwm3";
-    pwm4TopicStat    = deviceName + "/pwm4";
-    pwm5TopicStat    = deviceName + "/pwm5";
+    // pwm2TopicStat    = deviceName + "/pwm2";
+    // pwm3TopicStat    = deviceName + "/pwm3";
+    // pwm4TopicStat    = deviceName + "/pwm4";
+    // pwm5TopicStat    = deviceName + "/pwm5";
     pwm6TopicStat    = deviceName + "/pwm6";
     pwm7TopicStat    = deviceName + "/pwm7";
     pwm8TopicStat    = deviceName + "/pwm8";
@@ -656,10 +670,10 @@ void reinitMacAndTopics()
     pwm16TopicStat   = deviceName + "/pwm16";
 
     pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
-    pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
-    pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
-    pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
-    pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+    // pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+    // pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+    // pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+    // pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
     pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
     pwm7TopicCmnd    = pwm7TopicStat + cmndSufix;
     pwm8TopicCmnd    = pwm8TopicStat + cmndSufix;

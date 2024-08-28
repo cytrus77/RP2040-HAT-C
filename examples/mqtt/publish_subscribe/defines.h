@@ -28,14 +28,11 @@ using namespace std;
 /* Timeout */
 #define DEFAULT_TIMEOUT 1000 // 1 second
 
-// #include "AnalogSensor.h"
-
 // TimerOne configLed
 const unsigned long CYCLES_PER_SECOND = 8000;
 const unsigned int PIR_PERIOD_MS = 300;
 const unsigned int ANALOG_PERIOD_MS = 3000;
 const float MAX_ADC_V = 5.0;
-// const AnalogSensor::SScaler ANALOG_SCALER = AnalogSensor::SScaler(0, 1024, 100, 0);
 
 std::string charToHexString(char input) {
     const char hexDigits[] = "0123456789ABCDEF";
@@ -45,34 +42,22 @@ std::string charToHexString(char input) {
     return result;
 }
 
-// Darunia
-// #define MAC      { 0x00, 0x08, 0xDC, 0xDA, 0xCD, 0x01 }
-// #define IP       { 192, 168, 17, 31 }
-// #define GATEWAY  { 192, 168, 17, 1 }
-// #define SUBNET   { 255, 255, 255, 0 }
-// #define MQTT_SERVER { 192, 168, 17, 30 }
-// #define DNS      { 8, 8, 8, 8 }
-// const string MQTT_CLIENT_ID = "CT-pico-1";
-// const string deviceName = "CTpico1";
-
-// WLKP
-#define MAC      { 0x00, 0x08, 0xDC, 0x77, 0xCD, 0x02 }
-#define IP       { 192, 168, 116, 131 }
-#define GATEWAY  { 192, 168, 116, 1 }
+// GENERIC CONF
+#define IP       { 192, 168, 38, 111 }
 #define SUBNET   { 255, 255, 255, 0 }
-#define MQTT_SERVER { 192, 168, 116, 135 }
+#define GATEWAY  { 192, 168, 38, 1 }
 #define DNS      { 8, 8, 8, 8 }
-const std::vector<char> macAddr = MAC;
-const string MQTT_CLIENT_ID = "CT-pico-combo-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
-const string deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+#define MAC      { 0x2C, 0x08, 0x01, 0x02, 0x03, 0x04 }
 
-// Ethernet config
-// #define MAC      { 0x00, 0x08, 0xDC, 0x18, 0x34, 0x56 }
-// #define IP       { 192, 168, 38, 222 }
-// #define SUBNET   { 255, 255, 255, 0 }
-// #define GATEWAY  { 192, 168, 38, 1 }
-// #define DNS      { 8, 8, 8, 8 }
-// #define MQTT_SERVER { 192, 168, 38, 207 }
+// MQTT config
+// Seraf - Kobaltowa
+// #define MQTT_SERVER { 192, 168, 13, 40 }
+// WLKP
+// #define MQTT_SERVER { 192, 168, 116, 135 }
+// MARCIN - RYCERSKA
+#define MQTT_SERVER { 192, 168, 101, 10 }
+
+//======================================================================================
 
 /* MQTT IP */
 #define MQTT_PUBLISH_PERIOD (1000 * 1) // 1 seconds
@@ -80,44 +65,46 @@ const string deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToH
 const uint16_t MQTT_PORT = 1883;
 
 // MQTT
-// const string MQTT_CLIENT_ID = "rpi-pico";
+std::vector<unsigned char> macAddr = MAC;
+string MQTT_CLIENT_ID = "CT-pico-combo-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+string deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
 const string MQTT_USERNAME = "wiznet";
 const string MQTT_PASSWORD = "0123456789";
 
 const string cmndSufix  = "/cmnd";
 
-const string statusTopic      = deviceName + "/status";
-const string uptimeTopic      = deviceName + "/uptime";
-const string willTopic        = deviceName + "/LWT";
+string statusTopic      = deviceName + "/status";
+string uptimeTopic      = deviceName + "/uptime";
+string willTopic        = deviceName + "/LWT";
 const string willMessageOff   = "offline";
 const string willMessageOn    = "online";
 
-const string pir1Topic        = deviceName + "/move1";
-const string pir2Topic        = deviceName + "/move2";
-const string pir3Topic        = deviceName + "/move3";
-const string pir4Topic        = deviceName + "/move4";
-const string pir5Topic        = deviceName + "/move5";
-const string pir6Topic        = deviceName + "/move6";
-const string pir7Topic        = deviceName + "/move7";
-const string pir8Topic        = deviceName + "/move8";
-const string pir9Topic        = deviceName + "/move9";
+string pir1Topic        = deviceName + "/move1";
+string pir2Topic        = deviceName + "/move2";
+string pir3Topic        = deviceName + "/move3";
+string pir4Topic        = deviceName + "/move4";
+string pir5Topic        = deviceName + "/move5";
+string pir6Topic        = deviceName + "/move6";
+string pir7Topic        = deviceName + "/move7";
+string pir8Topic        = deviceName + "/move8";
+string pir9Topic        = deviceName + "/move9";
 
-const string light1Topic      = deviceName + "/light1";
-const string light2Topic      = deviceName + "/light2";
-const string light3Topic      = deviceName + "/light3";
+string light1Topic      = deviceName + "/light1";
+string light2Topic      = deviceName + "/light2";
+string light3Topic      = deviceName + "/light3";
 
-const string pwm1TopicStat    = deviceName + "/pwm1";
-const string pwm2TopicStat    = deviceName + "/pwm2";
-const string pwm3TopicStat    = deviceName + "/pwm3";
-const string pwm4TopicStat    = deviceName + "/pwm4";
-const string pwm5TopicStat    = deviceName + "/pwm5";
-const string pwm6TopicStat    = deviceName + "/pwm6";
-const string pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
-const string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
-const string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
-const string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
-const string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
-const string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
+string pwm1TopicStat    = deviceName + "/pwm1";
+string pwm2TopicStat    = deviceName + "/pwm2";
+string pwm3TopicStat    = deviceName + "/pwm3";
+string pwm4TopicStat    = deviceName + "/pwm4";
+string pwm5TopicStat    = deviceName + "/pwm5";
+string pwm6TopicStat    = deviceName + "/pwm6";
+string pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
+string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
 
 const int PWM1Pin = 3;
 const int PWM2Pin = 22;

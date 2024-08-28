@@ -72,10 +72,10 @@ const string willMessageOff   = "offline";
 const string willMessageOn    = "online";
 
 string pwm1TopicStat    = deviceName + "/pwm1";
-string pwm2TopicStat    = deviceName + "/pwm2";
-string pwm3TopicStat    = deviceName + "/pwm3";
-string pwm4TopicStat    = deviceName + "/pwm4";
-string pwm5TopicStat    = deviceName + "/pwm5";
+// string pwm2TopicStat    = deviceName + "/pwm2";
+// string pwm3TopicStat    = deviceName + "/pwm3";
+// string pwm4TopicStat    = deviceName + "/pwm4";
+// string pwm5TopicStat    = deviceName + "/pwm5";
 string pwm6TopicStat    = deviceName + "/pwm6";
 string pwm7TopicStat    = deviceName + "/pwm7";
 string pwm8TopicStat    = deviceName + "/pwm8";
@@ -89,10 +89,10 @@ string pwm15TopicStat   = deviceName + "/pwm15";
 string pwm16TopicStat   = deviceName + "/pwm16";
 
 string pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
-string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
-string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
-string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
-string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+// string pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+// string pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+// string pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+// string pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
 string pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
 string pwm7TopicCmnd    = pwm7TopicStat + cmndSufix;
 string pwm8TopicCmnd    = pwm8TopicStat + cmndSufix;
@@ -106,7 +106,7 @@ string pwm15TopicCmnd   = pwm15TopicStat + cmndSufix;
 string pwm16TopicCmnd   = pwm16TopicStat + cmndSufix;
 
 const int PWM1Pin = 28;
-const int PWM2Pin = 27;
+const int PWM2Pin = 27;  
 const int PWM3Pin = 26;
 const int PWM4Pin = 22;
 const int PWM5Pin = 21;
@@ -141,10 +141,10 @@ typedef struct PWMchannel
 } PWMchannel;
 
 PWMchannel pwm1 = PWMchannel(pwm1TopicStat, pwm1TopicCmnd, PWM1Pin);
-PWMchannel pwm2 = PWMchannel(pwm2TopicStat, pwm2TopicCmnd, PWM2Pin);
-PWMchannel pwm3 = PWMchannel(pwm3TopicStat, pwm3TopicCmnd, PWM3Pin);
-PWMchannel pwm4 = PWMchannel(pwm4TopicStat, pwm4TopicCmnd, PWM4Pin);
-PWMchannel pwm5 = PWMchannel(pwm5TopicStat, pwm5TopicCmnd, PWM5Pin);
+// PWMchannel pwm2 = PWMchannel(pwm2TopicStat, pwm2TopicCmnd, PWM2Pin);
+// PWMchannel pwm3 = PWMchannel(pwm3TopicStat, pwm3TopicCmnd, PWM3Pin);
+// PWMchannel pwm4 = PWMchannel(pwm4TopicStat, pwm4TopicCmnd, PWM4Pin);
+// PWMchannel pwm5 = PWMchannel(pwm5TopicStat, pwm5TopicCmnd, PWM5Pin);
 PWMchannel pwm6 = PWMchannel(pwm6TopicStat, pwm6TopicCmnd, PWM6Pin);
 PWMchannel pwm7 = PWMchannel(pwm7TopicStat, pwm7TopicCmnd, PWM7Pin);
 PWMchannel pwm8 = PWMchannel(pwm8TopicStat, pwm8TopicCmnd, PWM8Pin);

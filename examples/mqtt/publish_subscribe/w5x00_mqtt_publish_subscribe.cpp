@@ -29,6 +29,7 @@
 /* pico include */
 #include "pico/stdlib.h"
 #include "pico/time.h"
+#include "pico/unique_id.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
@@ -133,6 +134,10 @@ void processPIR(PIR& pir, bool state);
 void log(const string& domain, const string& log) { std::cout << domain << ": " << log << std::endl; }
 void log(const string& domain, const uint32_t value) { std::cout << domain << ": " << value << std::endl; }
 
+/* Utils */
+std::vector<unsigned char> getUniqueMAC();
+void reinitMacAndTopics();
+
 /**
  * ----------------------------------------------------------------------------------------------------
  * Main
@@ -144,6 +149,7 @@ int main()
     stdio_init_all();
 
     watchdog_enable(10000, false);
+    reinitMacAndTopics();
 
     pirInit(pir1.pinNo, &gpio_callback);
     pirInit(pir2.pinNo, &gpio_callback);
@@ -639,4 +645,69 @@ static void wizchip_dhcp_conflict(void)
     // halt or reset or any...
     while (1)
         ; // this example is halt.
+}
+
+std::vector<unsigned char> getUniqueMAC()
+{
+    const size_t id_size = 8;
+    size_t macByteCounter = 0;
+    pico_unique_board_id_t id;
+    pico_get_unique_board_id(&id);
+    std::vector<unsigned char> mac(6);
+    mac.at(macByteCounter++) = 0x2C;
+    mac.at(macByteCounter++) = 0x08;
+    for (int len = id_size - 4; len < id_size; len++)
+    {
+        mac.at(macByteCounter++) = id.id[len];
+    }
+
+    return mac;
+}
+
+void reinitMacAndTopics()
+{
+    macAddr = getUniqueMAC();
+    MQTT_CLIENT_ID = "CT-pico-combo-" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+    deviceName = "CTpicoCombo_" + charToHexString(macAddr[3]) + charToHexString(macAddr[4]) + charToHexString(macAddr[5]);
+
+    g_net_info =
+    {
+        .mac = { macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5] },             // MAC address
+        .ip  = IP,                          // IP address
+        .sn  = SUBNET,                      // Subnet Mask
+        .gw  = GATEWAY,                     // Gateway
+        .dns = DNS,                         // DNS server
+        .dhcp = NETINFO_DHCP                // DHCP enable/disable
+    };
+
+    statusTopic      = deviceName + "/status";
+    uptimeTopic      = deviceName + "/uptime";
+    willTopic        = deviceName + "/LWT";
+
+    pir1Topic        = deviceName + "/move1";
+    pir2Topic        = deviceName + "/move2";
+    pir3Topic        = deviceName + "/move3";
+    pir4Topic        = deviceName + "/move4";
+    pir5Topic        = deviceName + "/move5";
+    pir6Topic        = deviceName + "/move6";
+    pir7Topic        = deviceName + "/move7";
+    pir8Topic        = deviceName + "/move8";
+    pir9Topic        = deviceName + "/move9";
+
+    light1Topic      = deviceName + "/light1";
+    light2Topic      = deviceName + "/light2";
+    light3Topic      = deviceName + "/light3";
+
+    pwm1TopicStat    = deviceName + "/pwm1";
+    pwm2TopicStat    = deviceName + "/pwm2";
+    pwm3TopicStat    = deviceName + "/pwm3";
+    pwm4TopicStat    = deviceName + "/pwm4";
+    pwm5TopicStat    = deviceName + "/pwm5";
+    pwm6TopicStat    = deviceName + "/pwm6";
+    pwm1TopicCmnd    = pwm1TopicStat + cmndSufix;
+    pwm2TopicCmnd    = pwm2TopicStat + cmndSufix;
+    pwm3TopicCmnd    = pwm3TopicStat + cmndSufix;
+    pwm4TopicCmnd    = pwm4TopicStat + cmndSufix;
+    pwm5TopicCmnd    = pwm5TopicStat + cmndSufix;
+    pwm6TopicCmnd    = pwm6TopicStat + cmndSufix;
 }
