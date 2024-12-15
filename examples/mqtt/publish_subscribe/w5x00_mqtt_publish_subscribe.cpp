@@ -118,8 +118,8 @@ static time_t millis(void);
 
 void networkConfig();
 void mqttConnect();
-bool sendMqtt(const string& topic, const string& data);
-bool sendMqtt(const string& topic, const int value);
+bool sendMqtt(const string& topic, const string& data, const bool retained = false);
+bool sendMqtt(const string& topic, const int value, const bool retained = false);
 
 void configPWM(const uint8_t pinNo);
 void on_pwm_wrap();
@@ -165,6 +165,9 @@ int main()
     adc_gpio_init(Port4ADCLPin);
     adc_gpio_init(Port5ADCLPin);
     adc_gpio_init(Port6ADCLPin);
+    gpio_pull_up(Port4ADCLPin);
+    gpio_pull_up(Port5ADCLPin);
+    gpio_pull_up(Port6ADCLPin);
 
     configPWM(pwm1.pinNo);
     configPWM(pwm2.pinNo);
@@ -193,7 +196,7 @@ int main()
 
             if (!initDone)
             {
-                auto initRet = sendMqtt(willTopic, willMessageOn);
+                auto initRet = sendMqtt(willTopic, willMessageOn, true);
                 initDone = initRet;
             }
 
@@ -484,11 +487,11 @@ void mqttConnect()
     log("MQTT", "Subscribed");
 }
 
-bool sendMqtt(const string& topic, const string& data)
+bool sendMqtt(const string& topic, const string& data, const bool retained)
 {
     /* Configure publish message */
     g_mqtt_message.qos = QOS0;
-    g_mqtt_message.retained = 0;
+    g_mqtt_message.retained = retained ? 1 : 0;
     g_mqtt_message.dup = 0;
     g_mqtt_message.payload = const_cast<char*>(data.c_str());
     g_mqtt_message.payloadlen = strlen(data.c_str());
@@ -504,16 +507,16 @@ bool sendMqtt(const string& topic, const string& data)
     return true;
 }
 
-bool sendMqtt(const string& topic, const int value)
+bool sendMqtt(const string& topic, const int value, const bool retained)
 {
   char dataChar[6];
   itoa(value, dataChar, 10);
   const string dataStr(dataChar);
-  return sendMqtt(topic, dataStr);
+  return sendMqtt(topic, dataStr, retained);
 }
 
 /* MQTT */
-void setMqttPwmTarget(PWMchannel& channel, uint8_t targetPwm)
+void setMqttPwmTarget(PWMchannel& channel, uint16_t targetPwm)
 {
     channel.targetPWM = targetPwm;
 }
@@ -528,9 +531,9 @@ uint8_t getValueFromMsg(MessageData *msg_data)
 static void handle_pwm_message(MessageData *msg_data, PWMchannel& channel)
 {
     log("MQTT", "received: " + channel.topicCmnd);
-    auto value = getValueFromMsg(msg_data) * 2.55;
+    uint16_t value = getValueFromMsg(msg_data);
     log("MQTT", value);
-    setMqttPwmTarget(channel, value);
+    setMqttPwmTarget(channel, value * 655.35);
     sendMqtt(channel.topicStat, value);
 }
 
@@ -570,6 +573,8 @@ void configPWM(const uint8_t pinNo)
     // Get some sensible defaults for the slice configuration. By default, the
     // counter is allowed to wrap over its maximum range (0 to 2**16-1)
     pwm_config config = pwm_get_default_config();
+    // Set wrap to 65535 for 16-bit resolution
+    pwm_config_set_wrap(&config, 65535);
     // Set divider, reduces counter clock to sysclock/this value
     pwm_config_set_clkdiv(&config, 4.f);
     // Load the configuration into our PWM slice, and set it running.
@@ -583,13 +588,21 @@ uint16_t calculatePWMValue(PWMchannel& channel)
 {
     if (channel.targetPWM != channel.currentPWM)
     {
-        if (channel.targetPWM > channel.currentPWM)
-            channel.currentPWM++;
-        else if (channel.targetPWM < channel.currentPWM)
-            channel.currentPWM--;
+        const uint16_t STEP = 40;
+        if (abs(channel.targetPWM - channel.currentPWM) > STEP)
+        {
+            if (channel.targetPWM > channel.currentPWM)
+                channel.currentPWM = channel.currentPWM + STEP;
+            else if (channel.targetPWM < channel.currentPWM)
+                channel.currentPWM = channel.currentPWM - STEP;;
+        }
+        else
+        {
+            channel.currentPWM = channel.targetPWM;
+        }
     }
 
-    return channel.currentPWM * channel.currentPWM;
+    return channel.currentPWM;
 }
 
 void setPWMValue(PWMchannel& channel)

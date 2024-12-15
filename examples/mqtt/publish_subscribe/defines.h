@@ -56,6 +56,8 @@ std::string charToHexString(char input) {
 // #define MQTT_SERVER { 192, 168, 116, 135 }
 // MARCIN - RYCERSKA
 #define MQTT_SERVER { 192, 168, 101, 10 }
+// KLECZKO
+// #define MQTT_SERVER { 192, 168, 38, 11 }
 
 //======================================================================================
 
@@ -169,8 +171,8 @@ typedef struct PIR
 
 typedef struct PWMchannel
 {
-    uint8_t targetPWM;
-    uint8_t currentPWM;
+    uint16_t targetPWM;
+    uint16_t currentPWM;
     const string& topicStat;
     const string& topicCmnd;
     const uint8_t pinNo;

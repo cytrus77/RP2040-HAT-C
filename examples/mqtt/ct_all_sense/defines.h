@@ -49,7 +49,10 @@ std::string charToHexString(char input) {
 // Seraf - Kobaltowa
 // #define MQTT_SERVER { 192, 168, 13, 40 }
 // WLKP
-#define MQTT_SERVER { 192, 168, 116, 135 }
+// #define MQTT_SERVER { 192, 168, 116, 135 }
+// MARCIN - RYCERSKA
+#define MQTT_SERVER { 192, 168, 101, 10 }
+
 
 //======================================================================================
 
